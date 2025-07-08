@@ -35,6 +35,7 @@ project.ext.envConfigFiles = [
 ]
 apply from: project(':flutter_config').projectDir.getPath() + "/dotenv.gradle"
 android {
+    namespace 'com.byneapp.flutter_config'
     compileSdkVersion 29
 
     sourceSets {
