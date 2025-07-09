@@ -37,6 +37,13 @@ apply from: project(':flutter_config').projectDir.getPath() + "/dotenv.gradle"
 android {
     namespace 'com.byneapp.flutter_config'
     compileSdkVersion 29
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
