@@ -1,3 +1,12 @@
+## 2.0.2
+
+- Update deprecated Ruby code in iOS script.
+
+## 2.0.1
+
+- Update to Gradle 7.3.0.
+- Update to Kotlin 1.7.20
+
 ## 2.0.0
 
 - **Breaking change**. Gradle 4.0+ is needed on Android. 

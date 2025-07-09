@@ -82,6 +82,7 @@ tasks.whenTaskAdded { task ->
     if (project.hasProperty("envConfigFiles")) {
         project.envConfigFiles.each { envConfigName, envConfigFile ->
             if (task.name.toLowerCase() == "generate" + envConfigName + "buildconfig") {
+
                 android.applicationVariants.all { variant ->
                     def variantConfigString = variant.getName()
                     if (envConfigName.contains(variantConfigString.toLowerCase())) {
@@ -89,10 +90,11 @@ tasks.whenTaskAdded { task ->
                         project.env.each { k, v ->
                             def escaped = v.replaceAll("%", "\\\\u0025")
                             variant.buildConfigField "String", k, "\"$v\""
-                            variant.resValue "string", k, "\"$escaped\""
+                            variant.resValue "string", k, "$escaped"
                         }
                     }
                 }
+
             }
         }
     }
