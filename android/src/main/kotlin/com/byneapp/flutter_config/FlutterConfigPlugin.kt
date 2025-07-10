@@ -1,83 +1,69 @@
 package com.byneapp.flutter_config
 
 import android.app.Activity
-import android.content.Context
-import android.content.res.Resources
 import androidx.annotation.NonNull
-import io.flutter.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry.Registrar
-import java.lang.IllegalArgumentException
-import java.lang.reflect.Field
 
-class FlutterConfigPlugin(private val context: Context? = null): FlutterPlugin, MethodCallHandler {
+class FlutterConfigPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
+  private lateinit var channel: MethodChannel
+  private var activity: Activity? = null
 
-  private var applicationContext: Context? = context
-
-  private lateinit var channel : MethodChannel
-
-  override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-    applicationContext = flutterPluginBinding.applicationContext
-    channel = MethodChannel(flutterPluginBinding.binaryMessenger, "flutter_config")
+  override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    channel = MethodChannel(binding.binaryMessenger, "flutter_config")
     channel.setMethodCallHandler(this)
   }
 
-  override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-    channel.setMethodCallHandler(null)
-    applicationContext = null
-  }
-
+  // This static function is optional and equivalent to onAttachedToEngine.
+  // It supports the old pre-Flutter-1.12 Android projects.
   companion object {
     @JvmStatic
     fun registerWith(registrar: Registrar) {
       val channel = MethodChannel(registrar.messenger(), "flutter_config")
-      channel.setMethodCallHandler(FlutterConfigPlugin(registrar.activity()))
+      val plugin = FlutterConfigPlugin()
+      plugin.activity = registrar.activity()
+      channel.setMethodCallHandler(plugin)
     }
   }
 
-  override fun onMethodCall(call: MethodCall, result: Result) {
-    if (call.method == "loadEnvVariables") {
-      val variables = loadEnvVariables()
-      result.success(variables)
+  override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+    if (call.method == "getAll") {
+      result.success(FlutterConfig.properties)
+    } else if (call.method == "get") {
+      val key = call.argument<String>("key")
+      if (key == null) {
+        result.error("Missing key", "You must provide a key", null)
+        return
+      }
+      result.success(FlutterConfig.get(key))
     } else {
       result.notImplemented()
     }
   }
 
-  private fun loadEnvVariables(): Map<String, Any?> {
-    val variables = hashMapOf<String, Any?>()
+  override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    channel.setMethodCallHandler(null)
+  }
 
-    try {
-      val context = applicationContext!!.applicationContext
-      val resId = context.resources.getIdentifier("build_config_package", "string", context.packageName)
-      val className: String = try {
-        context.getString(resId)
-      } catch (e: Resources.NotFoundException) {
-        applicationContext!!.packageName
-      }
+  override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+    activity = binding.activity
+  }
 
-      val clazz = Class.forName("$className.BuildConfig")
+  override fun onDetachedFromActivity() {
+    activity = null
+  }
 
-      fun extractValue(f: Field): Any? {
-        return try {
-          f.get(null)
-        } catch (e: IllegalArgumentException) {
-          null
-        } catch (e: IllegalAccessException) {
-          null
-        }
-      }
+  override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+    activity = binding.activity
+  }
 
-      clazz.declaredFields.forEach {
-        variables += it.name to extractValue(it)
-      }
-    } catch (e: ClassNotFoundException) {
-      Log.d("FlutterConfig", "Could not access BuildConfig")
-    }
-    return variables
+  override fun onDetachedFromActivityForConfigChanges() {
+    activity = null
   }
 }
